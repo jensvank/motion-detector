@@ -17,6 +17,8 @@ Capture any screen window — VLC, a browser stream, a webcam — draw detection
 ## 📸 Screenshots
 
 <img width="1508" height="961" alt="image" src="https://github.com/user-attachments/assets/123d1fd4-44b6-46b1-a717-d9247def4417" />
+<img width="3416" height="1858" alt="image" src="https://github.com/user-attachments/assets/b273e15a-2e97-4832-9184-8fd32976cece" />
+
 
 ***
 
