@@ -4,7 +4,7 @@
 
 Capture any screen window — VLC, a browser stream, a webcam — draw detection zones directly on the video, and receive instant visual and audio alerts when motion is detected. Automatically saves screenshots on alarm.
 
-**[🚀 Live Demo](https://jensvank.github.io/motion-detector/motion-detector.html)** &nbsp;·&nbsp; **[📥 Download](https://jensvank.github.io/motion-detector/motion-detector.html)**
+**[🚀 Live Demo](https://jensvank.github.io/motion-detector/motion-detector.html)**
 
 
 
