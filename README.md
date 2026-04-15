@@ -41,7 +41,7 @@ Capture any screen window — VLC, a browser stream, a webcam — draw detection
 ### Option 1 — GitHub Pages (recommended)
 
 ```
-[https://YOUR-USERNAME.github.io/motion-detector/](https://jensvank.github.io/motion-detector/motion-detector.html)
+[https://jensvank.github.io/motion-detector/motion-detector.html]
 ```
 
 Open the URL in **Safari or Chrome** — no installation needed.
