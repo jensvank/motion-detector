@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="nl" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Motion Detector</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300..700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --text-xs:clamp(0.75rem,0.7rem + 0.25vw,0.875rem);
+  --text-sm:clamp(0.875rem,0.8rem + 0.35vw,1rem);
+  --text-base:clamp(1rem,0.95rem + 0.25vw,1.125rem);
+  --text-lg:clamp(1.125rem,1rem + 0.75vw,1.5rem);
+  --space-1:.25rem; --space-2:.5rem; --space-3:.75rem;
+  --space-4:1rem; --space-5:1.25rem; --space-6:1.5rem;
+  --space-8:2rem; --space-10:2.5rem; --space-12:3rem;
+  --radius-sm:.375rem; --radius-md:.5rem;
+  --radius-lg:.75rem; --radius-full:9999px;
+  --ti:180ms cubic-bezier(0.16,1,0.3,1);
+  --font-body:'DM Sans','Helvetica Neue',sans-serif;
+  --font-mono:'DM Mono','Fira Code',monospace;
+}
+[data-theme="dark"] {
+  --bg:#0f1012; --surface:#161719; --surfaceOff:#202226; --surfaceDyn:#2a2c30;
+  --divider:#252729; --border:#333539;
+  --text:#e2e4e8; --textMuted:#8b8f99; --textFaint:#52555e;
+  --primary:#4fd1c5; --primaryHover:#38b2ac; --primaryHL:#1a3535;
+  --error:#fc8181; --errorHL:#3d1a1a;
+  --warn:#f6ad55; --success:#68d391;
+  --shadow-lg:0 12px 32px oklch(0 0 0/.5);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-font-smoothing:antialiased}
+body{font-family:var(--font-body);font-size:var(--text-sm);color:var(--text);background:var(--bg);height:100dvh;overflow:hidden;display:flex;flex-direction:column}
+button{cursor:pointer;background:none;border:none;font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--primary);outline-offset:3px;border-radius:var(--radius-sm)}
+.app-header{display:flex;align-items:center;justify-content:space-between;padding:var(--space-3) var(--space-5);background:var(--surface);border-bottom:1px solid var(--divider);flex-shrink:0;gap:var(--space-4)}
+.logo{display:flex;align-items:center;gap:var(--space-3);font-size:var(--text-base);font-weight:600;letter-spacing:-.01em}
+.logo svg{color:var(--primary);flex-shrink:0}
+.header-status{display:flex;align-items:center;gap:var(--space-4)}
+.badge{display:flex;align-items:center;gap:var(--space-2);font-size:var(--text-xs);font-family:var(--font-mono);padding:var(--space-1) var(--space-3);border-radius:var(--radius-full);background:var(--surfaceOff);border:1px solid var(--border);transition:all var(--ti)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--textFaint);transition:background var(--ti);flex-shrink:0}
+.dot.active{background:var(--success);box-shadow:0 0 6px var(--success)}
+.dot.alarm{background:var(--error);box-shadow:0 0 8px var(--error);animation:pdot .6s ease-in-out infinite alternate}
+.dot.warn{background:var(--warn);box-shadow:0 0 6px var(--warn)}
+@keyframes pdot{from{opacity:1}to{opacity:.3}}
+.app-body{display:flex;flex:1;overflow:hidden}
+.sidebar{width:272px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--divider);display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden}
+.sidebar::-webkit-scrollbar{width:4px}
+.sidebar::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.ss{padding:var(--space-4) var(--space-5);border-bottom:1px solid var(--divider)}
+.ss:last-child{border-bottom:none}
+.st{font-size:var(--text-xs);font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--textMuted);margin-bottom:var(--space-3)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--space-2);padding:var(--space-2) var(--space-4);border-radius:var(--radius-md);font-size:var(--text-sm);font-weight:500;transition:all var(--ti);white-space:nowrap;border:1px solid transparent;line-height:1.4}
+.btn-p{background:var(--primary);color:#0a1e1e;font-weight:600}
+.btn-p:hover{background:var(--primaryHover)}
+.btn-s{background:var(--surfaceOff);color:var(--text);border-color:var(--border)}
+.btn-s:hover{background:var(--surfaceDyn);border-color:var(--textFaint)}
+.btn-d{background:var(--errorHL);color:var(--error);border-color:color-mix(in oklch,var(--error) 30%,transparent)}
+.btn-d:hover{background:color-mix(in oklch,var(--error) 20%,transparent)}
+.btn-g{color:var(--textMuted);padding:var(--space-1) var(--space-2)}
+.btn-g:hover{color:var(--text);background:var(--surfaceOff)}
+.btn-full{width:100%}
+.btn-sm{padding:var(--space-1) var(--space-3);font-size:var(--text-xs)}
+.cg{margin-bottom:var(--space-4)}
+.cg:last-child{margin-bottom:0}
+.cl{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2);font-size:var(--text-xs);color:var(--textMuted)}
+.cl span{font-family:var(--font-mono);font-size:var(--text-xs);color:var(--primary);font-weight:500}
+input[type="range"]{-webkit-appearance:none;width:100%;height:4px;border-radius:2px;background:var(--surfaceDyn);outline:none;cursor:pointer}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--primary);box-shadow:0 0 0 3px var(--primaryHL);transition:box-shadow var(--ti)}
+input[type="range"]::-webkit-slider-thumb:hover{box-shadow:0 0 0 5px var(--primaryHL)}
+.tr{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);padding:var(--space-2) 0}
+.tl{font-size:var(--text-xs);color:var(--textMuted);line-height:1.4}
+.toggle{position:relative;width:36px;height:20px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0;position:absolute}
+.tslider{position:absolute;inset:0;background:var(--surfaceDyn);border-radius:20px;border:1px solid var(--border);cursor:pointer;transition:all var(--ti)}
+.tslider::before{content:'';position:absolute;width:14px;height:14px;border-radius:50%;background:var(--textFaint);top:2px;left:2px;transition:all var(--ti)}
+.toggle input:checked+.tslider{background:var(--primaryHL);border-color:var(--primary)}
+.toggle input:checked+.tslider::before{background:var(--primary);transform:translateX(16px)}
+.zone-list{display:flex;flex-direction:column;gap:var(--space-2)}
+.zi{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-3);border-radius:var(--radius-md);background:var(--surfaceOff);border:1px solid var(--border);transition:border-color var(--ti),background var(--ti)}
+.zi.trg{border-color:var(--error);background:var(--errorHL)}
+.zclr{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+.zname{flex:1;font-size:var(--text-xs);font-family:var(--font-mono);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zmot{font-family:var(--font-mono);font-size:var(--text-xs);color:var(--textFaint);width:36px;text-align:right;transition:color var(--ti)}
+.zmot.active{color:var(--error)}
+.zdel{color:var(--textFaint);padding:2px 4px;border-radius:var(--radius-sm);font-size:14px;line-height:1;transition:color var(--ti),background var(--ti)}
+.zdel:hover{color:var(--error);background:var(--errorHL)}
+.empty-z{text-align:center;padding:var(--space-5) var(--space-4);color:var(--textFaint);font-size:var(--text-xs);line-height:1.6;border:1px dashed var(--border);border-radius:var(--radius-lg)}
+.main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:var(--space-5);gap:var(--space-4);overflow:hidden}
+.cwrap{position:relative;border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-lg);max-width:100%;background:#000;border:1px solid var(--border);transition:box-shadow var(--ti)}
+.cwrap.alarm-on{animation:aborder .5s ease-in-out infinite alternate}
+@keyframes aborder{from{box-shadow:0 0 0 2px var(--error),var(--shadow-lg)}to{box-shadow:0 0 0 4px var(--error),0 0 20px color-mix(in oklch,var(--error) 40%,transparent)}}
+#vc{display:block;max-width:100%;max-height:calc(100dvh - 190px)}
+#oc{position:absolute;inset:0;cursor:crosshair}
+#oc.mode-view{cursor:default}
+.no-stream{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--space-4);padding:var(--space-10);color:var(--textMuted);text-align:center;min-width:480px;min-height:280px}
+.no-stream svg{color:var(--textFaint);margin-bottom:var(--space-2)}
+.no-stream h2{font-size:var(--text-lg);font-weight:600;color:var(--text)}
+.no-stream p{font-size:var(--text-sm);max-width:36ch;line-height:1.6}
+.toolbar{display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap;justify-content:center}
+.tb{display:inline-flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-3);border-radius:var(--radius-md);font-size:var(--text-xs);font-weight:500;background:var(--surface);border:1px solid var(--border);color:var(--textMuted);transition:all var(--ti);cursor:pointer}
+.tb:hover{background:var(--surfaceOff);color:var(--text);border-color:var(--textFaint)}
+.tb.active{background:var(--primaryHL);color:var(--primary);border-color:var(--primary)}
+.tsep{width:1px;height:24px;background:var(--divider)}
+.alarm-ov{position:fixed;inset:0;pointer-events:none;z-index:100;border:3px solid var(--error);opacity:0;transition:opacity .2s}
+.alarm-ov.vis{opacity:1;animation:aflash .5s ease-in-out infinite alternate}
+@keyframes aflash{from{opacity:.15}to{opacity:.5}}
+.alarm-bn{position:fixed;top:var(--space-12);left:50%;transform:translateX(-50%) translateY(-20px);background:var(--error);color:#fff;font-family:var(--font-mono);font-size:var(--text-sm);font-weight:600;padding:var(--space-2) var(--space-6);border-radius:var(--radius-full);box-shadow:var(--shadow-lg);opacity:0;transition:all .2s ease-out;pointer-events:none;z-index:101;white-space:nowrap;letter-spacing:.05em}
+.alarm-bn.vis{opacity:1;transform:translateX(-50%) translateY(0)}
+/* auto-snap flash feedback */
+.snap-flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;border-radius:var(--radius-lg);transition:opacity .05s}
+.snap-flash.go{opacity:.35}
+.stats-row{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2);margin-bottom:var(--space-3)}
+.sc{background:var(--surfaceOff);border:1px solid var(--border);border-radius:var(--radius-md);padding:var(--space-2) var(--space-3)}
+.sl{font-size:var(--text-xs);color:var(--textFaint);margin-bottom:2px}
+.sv{font-family:var(--font-mono);font-size:var(--text-sm);font-weight:500;color:var(--primary)}
+.log-a{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-md);padding:var(--space-2) var(--space-3);font-family:var(--font-mono);font-size:var(--text-xs);color:var(--textMuted);max-height:100px;overflow-y:auto;line-height:1.7}
+.log-a::-webkit-scrollbar{width:3px}
+.log-a::-webkit-scrollbar-thumb{background:var(--border)}
+.le{display:flex;gap:var(--space-2)}
+.lt{color:var(--textFaint);flex-shrink:0}
+.lm.alarm{color:var(--error);font-weight:500}
+.lm.ok{color:var(--success)}
+.lm.info{color:var(--textMuted)}
+.color-row{display:flex;gap:var(--space-2);margin-top:var(--space-3)}
+.csw{width:20px;height:20px;border-radius:var(--radius-sm);border:2px solid transparent;cursor:pointer;transition:transform var(--ti),border-color var(--ti)}
+.csw:hover{transform:scale(1.2)}
+.csw.sel{border-color:var(--text)}
+.chip{font-size:var(--text-xs);color:var(--textFaint);background:var(--surfaceOff);border:1px solid var(--border);padding:var(--space-1) var(--space-3);border-radius:var(--radius-full);font-family:var(--font-mono)}
+</style>
+</head>
+<body>
+<div class="alarm-ov" id="aov"></div>
+<div class="alarm-bn" id="abn">&#9888; BEWEGING GEDETECTEERD</div>
+
+<header class="app-header">
+  <div class="logo">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/>
+    </svg>
+    Motion Detector
+  </div>
+  <div class="header-status">
+    <span class="chip" id="fpsChip" aria-live="polite">-- fps</span>
+    <div class="badge"><span class="dot" id="sDot"></span><span id="sLbl">Geen stream</span></div>
+    <div class="badge"><span class="dot" id="mDot"></span><span id="mLbl" aria-live="assertive">Geen beweging</span></div>
+  </div>
+</header>
+
+<div class="app-body">
+<aside class="sidebar" aria-label="Instellingen">
+
+  <div class="ss">
+    <div class="st">Videobron</div>
+    <div style="display:flex;flex-direction:column;gap:var(--space-2)">
+      <button class="btn btn-p btn-full" id="bScreen">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        Scherm / VLC venster
+      </button>
+      <button class="btn btn-s btn-full" id="bCam">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+        Webcam
+      </button>
+      <button class="btn btn-g btn-full btn-sm" id="bStop" style="display:none">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+        Stream stoppen
+      </button>
+    </div>
+  </div>
+
+  <div class="ss">
+    <div class="st">Detectie</div>
+    <div class="cg">
+      <div class="cl"><label for="sens">Gevoeligheid</label><span id="sv">30</span>%</div>
+      <input type="range" id="sens" min="1" max="80" value="30" aria-label="Gevoeligheid">
+    </div>
+    <div class="cg">
+      <div class="cl"><label for="mArea">Min. bewegingsoppervlak</label><span id="av">3</span>%</div>
+      <input type="range" id="mArea" min="1" max="30" value="3" aria-label="Minimaal bewegingsoppervlak">
+    </div>
+    <div class="cg">
+      <div class="cl"><label for="cool">Alarm cooldown</label><span id="cv">3</span>s</div>
+      <input type="range" id="cool" min="1" max="30" value="3" aria-label="Alarm cooldown">
+    </div>
+    <div class="tr">
+      <span class="tl">Detectie actief</span>
+      <label class="toggle"><input type="checkbox" id="detOn" checked aria-label="Detectie aan/uit"><span class="tslider"></span></label>
+    </div>
+  </div>
+
+  <div class="ss">
+    <div class="st">Alarm</div>
+    <div class="tr">
+      <span class="tl">Geluidswaarschuwing</span>
+      <label class="toggle"><input type="checkbox" id="sndOn" checked aria-label="Geluid aan/uit"><span class="tslider"></span></label>
+    </div>
+    <div class="tr">
+      <span class="tl">Visueel alarm</span>
+      <label class="toggle"><input type="checkbox" id="visOn" checked aria-label="Visueel alarm aan/uit"><span class="tslider"></span></label>
+    </div>
+    <div class="tr">
+      <span class="tl">Auto-screenshot bij beweging</span>
+      <label class="toggle"><input type="checkbox" id="autoSnap" checked aria-label="Automatische screenshot aan/uit"><span class="tslider"></span></label>
+    </div>
+    <div class="cg" style="margin-top:var(--space-3)">
+      <div class="cl"><label for="vol">Volume</label><span id="vv">80</span>%</div>
+      <input type="range" id="vol" min="0" max="100" value="80" aria-label="Volume">
+    </div>
+    <div class="cg">
+      <div class="cl"><label for="aTone">Alarmtoon</label>
+        <select id="aTone" style="background:var(--surfaceOff);border:1px solid var(--border);border-radius:var(--radius-sm);padding:2px 6px;font-size:var(--text-xs);color:var(--text);font-family:var(--font-body)">
+          <option value="siren">Sirene</option>
+          <option value="beep">Pieptoon</option>
+          <option value="pulse">Puls</option>
+          <option value="horn">Claxon</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn btn-s btn-sm" id="bTest">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+      Test alarm
+    </button>
+  </div>
+
+  <div class="ss">
+    <div class="st" style="margin-bottom:var(--space-2)">Detectiezones</div>
+    <div class="color-row" id="cRow"></div>
+    <div style="margin-top:var(--space-3);margin-bottom:var(--space-3)">
+      <div id="zList" class="zone-list">
+        <div class="empty-z">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin:0 auto var(--space-2)" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="4 2"/><path d="M12 8v8M8 12h8"/></svg>
+          Teken zones op de video<br>door te klikken en slepen
+        </div>
+      </div>
+    </div>
+    <button class="btn btn-d btn-sm btn-full" id="bClear">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+      Alle zones wissen
+    </button>
+  </div>
+
+  <div class="ss">
+    <div class="st">Statistieken</div>
+    <div class="stats-row">
+      <div class="sc"><div class="sl">Alarmen</div><div class="sv" id="aCnt">0</div></div>
+      <div class="sc"><div class="sl">Screenshots</div><div class="sv" id="sCnt">0</div></div>
+    </div>
+    <div class="log-a" id="logEl" role="log" aria-live="polite" aria-label="Activiteitenlog">
+      <div class="le"><span class="lt">--:--:--</span><span class="lm info">Applicatie gestart</span></div>
+    </div>
+  </div>
+
+</aside>
+
+<main class="main">
+  <div class="toolbar" role="toolbar" aria-label="Videotools">
+    <button class="tb active" id="tDraw" data-tool="draw" aria-pressed="true">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="1"/></svg>
+      Zone tekenen
+    </button>
+    <div class="tsep" role="separator"></div>
+    <button class="tb" id="tView" data-tool="view" aria-pressed="false">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      Bekijken
+    </button>
+    <div class="tsep" role="separator"></div>
+    <button class="tb" id="bSil" aria-label="Alarm dempen">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+      Alarm dempen
+    </button>
+    <div class="tsep" role="separator"></div>
+    <button class="tb" id="bSnap" aria-label="Handmatige screenshot">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      Screenshot
+    </button>
+  </div>
+
+  <div class="cwrap" id="cWrap">
+    <div class="snap-flash" id="snapFlash"></div>
+    <div class="no-stream" id="noStr">
+      <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M7 10h10" stroke-dasharray="2 2" opacity=".4"/></svg>
+      <h2>Geen video actief</h2>
+      <p>Start een stream door een schermopname of webcam te selecteren. Open VLC eerst en selecteer daarna het venster.</p>
+      <button class="btn btn-p" id="bScreenAlt">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        Scherm selecteren
+      </button>
+    </div>
+    <canvas id="vc" style="display:none"></canvas>
+    <canvas id="oc" style="display:none"></canvas>
+  </div>
+</main>
+</div>
+
+<script>
+// ── Constants ────────────────────────────────────────────
+const COLORS = ['#4fd1c5','#f6ad55','#fc8181','#68d391','#a78bfa','#60a5fa','#f472b6','#34d399'];
+
+// ── State ────────────────────────────────────────────────
+const st = {
+  stream: null,
+  running: false,
+  tool: 'draw',
+  zones: [],
+  color: '#4fd1c5',
+  drawing: false,
+  ds: null,
+  dc: null,
+  prev: null,
+  alarmOn: false,
+  coolTimer: null,
+  alarmCnt: 0,
+  snapCnt: 0,
+  fCnt: 0,
+  fpsT: 0,
+  fpsF: 0,
+  audioCtx: null,
+  nodes: [],
+  silenced: false,
+  // cached settings — updated on input events, not read from DOM in hot path
+  cfg: { sens: 30, minArea: 0.03, cool: 3, vol: 0.8, tone: 'siren',
+         detOn: true, sndOn: true, visOn: true, autoSnap: true }
+};
+
+// ── DOM refs ─────────────────────────────────────────────
+const video      = document.createElement('video');
+const vc         = document.getElementById('vc');
+const oc         = document.getElementById('oc');
+const vx         = vc.getContext('2d', { willReadFrequently: true });
+const ox         = oc.getContext('2d');
+const noStr      = document.getElementById('noStr');
+const cWrap      = document.getElementById('cWrap');
+const snapFlash  = document.getElementById('snapFlash');
+const sDot       = document.getElementById('sDot');
+const sLbl       = document.getElementById('sLbl');
+const mDot       = document.getElementById('mDot');
+const mLbl       = document.getElementById('mLbl');
+const fpsChip    = document.getElementById('fpsChip');
+const zList      = document.getElementById('zList');
+const logEl      = document.getElementById('logEl');
+const aov        = document.getElementById('aov');
+const abn        = document.getElementById('abn');
+const aCntEl     = document.getElementById('aCnt');
+const sCntEl     = document.getElementById('sCnt');
+const fCntEl     = document.getElementById('fCnt'); // may not exist — see stat section rename
+
+video.autoplay = true;
+video.muted    = true;
+video.playsInline = true;
+
+// ── Settings sync (DOM → cache) ──────────────────────────
+function syncCfg() {
+  st.cfg.sens    = parseInt(document.getElementById('sens').value, 10);
+  st.cfg.minArea = parseInt(document.getElementById('mArea').value, 10) / 100;
+  st.cfg.cool    = parseInt(document.getElementById('cool').value, 10);
+  st.cfg.vol     = parseInt(document.getElementById('vol').value, 10) / 100;
+  st.cfg.tone    = document.getElementById('aTone').value;
+  st.cfg.detOn   = document.getElementById('detOn').checked;
+  st.cfg.sndOn   = document.getElementById('sndOn').checked;
+  st.cfg.visOn   = document.getElementById('visOn').checked;
+  st.cfg.autoSnap= document.getElementById('autoSnap').checked;
+}
+
+// Wire all controls to syncCfg + update display label
+[
+  ['sens',  'sv', v => v + '%'],
+  ['mArea', 'av', v => v + '%'],
+  ['cool',  'cv', v => v + 's'],
+  ['vol',   'vv', v => v + '%'],
+].forEach(([id, vid, fmt]) => {
+  const el  = document.getElementById(id);
+  const lbl = document.getElementById(vid);
+  el.addEventListener('input', () => { lbl.textContent = fmt(el.value); syncCfg(); });
+  // reset prev frame on sensitivity change to avoid false positives spike
+  if (id === 'sens') el.addEventListener('change', () => { st.prev = null; });
+});
+['detOn','sndOn','visOn','autoSnap','aTone'].forEach(id => {
+  document.getElementById(id).addEventListener('change', syncCfg);
+});
+
+// ── Color swatches ────────────────────────────────────────
+const cRow = document.getElementById('cRow');
+COLORS.forEach(c => {
+  const sw = document.createElement('button');
+  sw.className = 'csw' + (c === st.color ? ' sel' : '');
+  sw.style.background = c;
+  sw.setAttribute('aria-label', 'Kleur ' + c);
+  sw.addEventListener('click', () => {
+    st.color = c;
+    cRow.querySelectorAll('.csw').forEach(s => s.classList.remove('sel'));
+    sw.classList.add('sel');
+  });
+  cRow.appendChild(sw);
+});
+
+// ── Logging ───────────────────────────────────────────────
+function addLog(msg, type = 'info') {
+  const now = new Date();
+  const ts  = [now.getHours(), now.getMinutes(), now.getSeconds()]
+    .map(n => String(n).padStart(2, '0')).join(':');
+  const row  = document.createElement('div');
+  row.className = 'le';
+  const time = document.createElement('span');
+  time.className = 'lt';
+  time.textContent = ts;
+  const txt = document.createElement('span');
+  txt.className = 'lm ' + type;
+  txt.textContent = msg; // textContent — no XSS risk
+  row.appendChild(time);
+  row.appendChild(txt);
+  logEl.appendChild(row);
+  logEl.scrollTop = logEl.scrollHeight;
+  // keep max 60 entries
+  while (logEl.children.length > 60) logEl.removeChild(logEl.firstChild);
+}
+
+// ── Audio ─────────────────────────────────────────────────
+function getACtx() {
+  if (!st.audioCtx) st.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return st.audioCtx;
+}
+
+function playAlarm() {
+  const { vol, tone } = st.cfg;
+  const ctx  = getACtx();
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(vol * 0.5, ctx.currentTime);
+  gain.connect(ctx.destination);
+  st.nodes = [gain];
+
+  if (tone === 'siren') {
+    const o = ctx.createOscillator(); o.type = 'sawtooth';
+    o.frequency.setValueAtTime(400, ctx.currentTime);
+    o.frequency.linearRampToValueAtTime(900, ctx.currentTime + 0.5);
+    o.frequency.linearRampToValueAtTime(400, ctx.currentTime + 1.0);
+    o.frequency.linearRampToValueAtTime(900, ctx.currentTime + 1.5);
+    o.frequency.linearRampToValueAtTime(400, ctx.currentTime + 2.0);
+    o.connect(gain); o.start(ctx.currentTime); o.stop(ctx.currentTime + 2.0);
+    st.nodes.push(o);
+  } else if (tone === 'beep') {
+    [0, 0.25, 0.5, 0.75].forEach(t => {
+      const o = ctx.createOscillator(); o.type = 'square'; o.frequency.value = 880;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(vol * 0.4, ctx.currentTime + t);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.18);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(ctx.currentTime + t); o.stop(ctx.currentTime + t + 0.2);
+    });
+  } else if (tone === 'pulse') {
+    for (let i = 0; i < 6; i++) {
+      const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = 660;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, ctx.currentTime + i * 0.15);
+      g.gain.linearRampToValueAtTime(vol * 0.6, ctx.currentTime + i * 0.15 + 0.04);
+      g.gain.linearRampToValueAtTime(0, ctx.currentTime + i * 0.15 + 0.12);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(ctx.currentTime + i * 0.15); o.stop(ctx.currentTime + i * 0.15 + 0.15);
+    }
+  } else if (tone === 'horn') {
+    const o  = ctx.createOscillator(); o.type  = 'sawtooth'; o.frequency.value = 220;
+    const o2 = ctx.createOscillator(); o2.type = 'sawtooth'; o2.frequency.value = 330;
+    gain.gain.setValueAtTime(vol * 0.3, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.8);
+    o.connect(gain); o2.connect(gain);
+    o.start(ctx.currentTime); o.stop(ctx.currentTime + 0.8);
+    o2.start(ctx.currentTime); o2.stop(ctx.currentTime + 0.8);
+    st.nodes.push(o, o2);
+  }
+}
+
+function stopAlarm() {
+  st.nodes.forEach(n => { try { n.disconnect(); } catch (_) {} });
+  st.nodes = [];
+}
+
+// ── Screenshot ────────────────────────────────────────────
+function takeSnapshot(reason = 'handmatig') {
+  if (!st.running) return;
+
+  // Draw pure video frame to a temp canvas (no zone overlay)
+  const snap = document.createElement('canvas');
+  snap.width  = vc.width;
+  snap.height = vc.height;
+  snap.getContext('2d').drawImage(video, 0, 0);
+
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const ts  = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_`
+             + `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+  const filename = `motiondetect_${ts}.png`;
+
+  const a = document.createElement('a');
+  a.download = filename;
+  a.href = snap.toDataURL('image/png');
+  a.click();
+
+  // Visual flash feedback
+  snapFlash.classList.add('go');
+  setTimeout(() => snapFlash.classList.remove('go'), 150);
+
+  st.snapCnt++;
+  sCntEl.textContent = st.snapCnt;
+  addLog(`Screenshot: ${filename} (${reason})`, 'ok');
+}
+
+// ── Stream management ─────────────────────────────────────
+async function startStream(type) {
+  try {
+    let stream;
+    if (type === 'screen') {
+      stream = await navigator.mediaDevices.getDisplayMedia({
+        video: { frameRate: { ideal: 30 }, cursor: 'never' },
+        audio: false
+      });
+    } else {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } },
+        audio: false
+      });
+    }
+
+    // Set listener BEFORE play() to avoid race condition on fast metadata
+    video.addEventListener('loadedmetadata', () => {
+      const W = video.videoWidth, H = video.videoHeight;
+      vc.width = W; vc.height = H;
+      oc.width = W; oc.height = H;
+      noStr.style.display = 'none';
+      vc.style.display = 'block';
+      oc.style.display = 'block';
+      st.running = true;
+      st.prev    = null;
+      sDot.className = 'dot active';
+      sLbl.textContent = type === 'screen' ? 'Scherm actief' : 'Webcam actief';
+      document.getElementById('bStop').style.display = '';
+      addLog(type === 'screen' ? 'Schermopname gestart' : 'Webcam gestart', 'ok');
+      requestAnimationFrame(loop);
+    }, { once: true });
+
+    st.stream = stream;
+    video.srcObject = stream;
+    video.play().catch(err => addLog('Afspeelfout: ' + err.message, 'alarm'));
+
+    stream.getVideoTracks()[0].addEventListener('ended', () => stopStream());
+
+  } catch (err) {
+    addLog('Fout: ' + (err.message || 'Toegang geweigerd'), 'alarm');
+  }
+}
+
+function stopStream() {
+  st.running = false;
+
+  // Clear any pending alarm timers to prevent ghost clearAlarmUI calls
+  if (st.coolTimer) { clearTimeout(st.coolTimer); st.coolTimer = null; }
+  st.alarmOn = false;
+
+  if (st.stream) { st.stream.getTracks().forEach(t => t.stop()); st.stream = null; }
+  video.srcObject = null;
+
+  noStr.style.display = '';
+  vc.style.display = 'none';
+  oc.style.display = 'none';
+  sDot.className = 'dot';
+  sLbl.textContent = 'Geen stream';
+  document.getElementById('bStop').style.display = 'none';
+
+  stopAlarm();
+  aov.classList.remove('vis');
+  abn.classList.remove('vis');
+  cWrap.classList.remove('alarm-on');
+  mDot.className = 'dot';
+  mLbl.textContent = 'Geen beweging';
+
+  addLog('Stream gestopt', 'info');
+}
+
+// ── Zone drawing ──────────────────────────────────────────
+function canvasCoords(e) {
+  const r  = oc.getBoundingClientRect();
+  const sx = oc.width  / r.width;
+  const sy = oc.height / r.height;
+  return {
+    x: Math.round((e.clientX - r.left) * sx),
+    y: Math.round((e.clientY - r.top)  * sy)
+  };
+}
+
+oc.addEventListener('mousedown', e => {
+  if (st.tool !== 'draw') return;
+  st.drawing = true;
+  st.ds = canvasCoords(e);
+  st.dc = { ...st.ds };
+  e.preventDefault();
+});
+oc.addEventListener('mousemove', e => {
+  if (st.drawing) st.dc = canvasCoords(e);
+});
+oc.addEventListener('mouseup', e => {
+  if (!st.drawing) return;
+  st.drawing = false;
+  const end = canvasCoords(e);
+  const x = Math.min(st.ds.x, end.x);
+  const y = Math.min(st.ds.y, end.y);
+  const w = Math.abs(end.x - st.ds.x);
+  const h = Math.abs(end.y - st.ds.y);
+  if (w > 10 && h > 10) {
+    const zone = { id: Date.now(), x, y, w, h, color: st.color,
+                   name: 'Zone ' + (st.zones.length + 1), motion: 0, trg: false };
+    st.zones.push(zone);
+    addLog('Zone toegevoegd: ' + zone.name, 'info');
+    renderZones();
+  }
+  st.ds = null; st.dc = null;
+});
+oc.addEventListener('mouseleave', () => {
+  if (st.drawing) { st.drawing = false; st.ds = null; st.dc = null; }
+});
+
+// ── Zone list rendering ───────────────────────────────────
+// Renders full list; for motion % updates we patch in-place (see patchZoneMotion)
+function renderZones() {
+  if (!st.zones.length) {
+    zList.innerHTML = '';
+    const empty = document.createElement('div');
+    empty.className = 'empty-z';
+    empty.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin:0 auto var(--space-2)" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="4 2"/><path d="M12 8v8M8 12h8"/></svg>';
+    empty.appendChild(document.createTextNode('Teken zones op de video'));
+    empty.appendChild(document.createElement('br'));
+    empty.appendChild(document.createTextNode('door te klikken en slepen'));
+    zList.appendChild(empty);
+    return;
+  }
+  zList.innerHTML = '';
+  st.zones.forEach(z => {
+    const row = document.createElement('div');
+    row.className = 'zi' + (z.trg ? ' trg' : '');
+    row.dataset.id = z.id;
+
+    const clr = document.createElement('div');
+    clr.className = 'zclr'; clr.style.background = z.color;
+
+    const nm = document.createElement('span');
+    nm.className = 'zname'; nm.textContent = z.name;
+
+    const pct = Math.round(z.motion * 100);
+    const mot = document.createElement('span');
+    mot.className = 'zmot' + (pct > 0 ? ' active' : '');
+    mot.textContent = pct + '%';
+
+    const del = document.createElement('button');
+    del.className = 'zdel btn';
+    del.setAttribute('aria-label', 'Verwijder ' + z.name);
+    del.textContent = '✕';
+    del.dataset.zid = z.id;
+
+    row.append(clr, nm, mot, del);
+    zList.appendChild(row);
+  });
+}
+
+// Patch only the motion % and triggered state without rebuilding the DOM
+function patchZoneMotion() {
+  st.zones.forEach(z => {
+    const row = zList.querySelector(`[data-id="${z.id}"]`);
+    if (!row) return;
+    const pct = Math.round(z.motion * 100);
+    const mot = row.querySelector('.zmot');
+    if (mot) { mot.textContent = pct + '%'; mot.className = 'zmot' + (pct > 0 ? ' active' : ''); }
+    row.className = 'zi' + (z.trg ? ' trg' : '');
+  });
+}
+
+// Event delegation for zone delete — no window globals
+zList.addEventListener('click', e => {
+  const btn = e.target.closest('[data-zid]');
+  if (!btn) return;
+  const id = parseInt(btn.dataset.zid, 10);
+  st.zones = st.zones.filter(z => z.id !== id);
+  renderZones();
+});
+
+// ── Motion detection ──────────────────────────────────────
+function detect() {
+  if (!st.running || !st.cfg.detOn || !st.zones.length) return;
+
+  const W   = vc.width, H = vc.height;
+  const cur = vx.getImageData(0, 0, W, H);
+  if (!st.prev) { st.prev = cur; return; }
+
+  const thr  = Math.round((100 - st.cfg.sens) * 2.5);
+  const minA = st.cfg.minArea;
+  const prev = st.prev;
+  let anyTrg = false;
+
+  st.zones.forEach(z => {
+    let changed = 0, total = 0;
+    const x1 = Math.max(0, z.x), y1 = Math.max(0, z.y);
+    const x2 = Math.min(W, z.x + z.w), y2 = Math.min(H, z.y + z.h);
+    for (let y = y1; y < y2; y += 2) {
+      for (let x = x1; x < x2; x += 2) {
+        const i = (y * W + x) * 4;
+        const d = (Math.abs(cur.data[i]   - prev.data[i])
+                 + Math.abs(cur.data[i+1] - prev.data[i+1])
+                 + Math.abs(cur.data[i+2] - prev.data[i+2])) / 3;
+        if (d > thr) changed++;
+        total++;
+      }
+    }
+    z.motion = total > 0 ? changed / total : 0;
+    z.trg    = z.motion > minA;
+    if (z.trg) anyTrg = true;
+  });
+
+  st.prev = cur;
+
+  // Patch motion values without full re-render
+  patchZoneMotion();
+  updateMotionUI(anyTrg);
+
+  if (anyTrg) trigAlarm();
+  else if (st.alarmOn && !anyTrg) clearAlarmUI();
+}
+
+// ── Alarm ─────────────────────────────────────────────────
+function trigAlarm() {
+  if (st.coolTimer || st.alarmOn) return;
+  st.alarmOn  = true;
+  st.silenced = false;
+  st.alarmCnt++;
+  aCntEl.textContent = st.alarmCnt;
+  addLog('Beweging gedetecteerd!', 'alarm');
+
+  mDot.className = 'dot alarm';
+  mLbl.textContent = 'ALARM';
+  cWrap.classList.add('alarm-on');
+
+  if (st.cfg.visOn) { aov.classList.add('vis'); abn.classList.add('vis'); }
+  if (st.cfg.sndOn && !st.silenced) playAlarm();
+  if (st.cfg.autoSnap) takeSnapshot('beweging');
+
+  st.coolTimer = setTimeout(() => {
+    st.coolTimer = null;
+    if (st.alarmOn) clearAlarmUI();
+  }, st.cfg.cool * 1000);
+}
+
+function clearAlarmUI() {
+  st.alarmOn = false;
+  stopAlarm();
+  cWrap.classList.remove('alarm-on');
+  aov.classList.remove('vis');
+  abn.classList.remove('vis');
+  // Only reset motion dot when stream is still active
+  if (st.running) {
+    mDot.className = 'dot active';
+    mLbl.textContent = 'Geen beweging';
+  }
+}
+
+function updateMotionUI(has) {
+  if (!st.alarmOn) {
+    mDot.className = 'dot ' + (has ? 'warn' : 'active');
+    mLbl.textContent = has ? 'Beweging...' : 'Geen beweging';
+  }
+}
+
+// ── Render loop ───────────────────────────────────────────
+function hexRgba(h, a) {
+  const r = parseInt(h.slice(1, 3), 16);
+  const g = parseInt(h.slice(3, 5), 16);
+  const b = parseInt(h.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+let frameIdx = 0;
+function loop(ts) {
+  if (!st.running) return;
+  requestAnimationFrame(loop);
+
+  const W = vc.width, H = vc.height;
+  if (!W || !H || video.readyState < 2) return;
+
+  vx.drawImage(video, 0, 0, W, H);
+
+  // FPS counter
+  st.fpsF++;
+  if (ts - st.fpsT >= 1000) {
+    fpsChip.textContent = Math.round(st.fpsF * 1000 / (ts - st.fpsT)) + ' fps';
+    st.fpsF = 0; st.fpsT = ts;
+  }
+
+  // Motion detection every 3rd frame
+  frameIdx++;
+  if (frameIdx % 3 === 0) detect();
+
+  // Draw zone overlays
+  ox.clearRect(0, 0, W, H);
+  st.zones.forEach(z => {
+    ox.fillStyle = z.trg ? 'rgba(252,129,129,0.15)' : hexRgba(z.color, 0.08);
+    ox.fillRect(z.x, z.y, z.w, z.h);
+
+    ox.strokeStyle = z.trg ? '#fc8181' : z.color;
+    ox.lineWidth   = z.trg ? 2.5 : 1.5;
+    ox.setLineDash(z.trg ? [] : [6, 3]);
+    ox.strokeRect(z.x, z.y, z.w, z.h);
+    ox.setLineDash([]);
+
+    // Motion bar at bottom of zone
+    if (z.motion > 0) {
+      const bh = 4;
+      ox.fillStyle = hexRgba(z.color, 0.3);
+      ox.fillRect(z.x, z.y + z.h - bh, z.w, bh);
+      ox.fillStyle = z.trg ? '#fc8181' : z.color;
+      ox.fillRect(z.x, z.y + z.h - bh, z.w * Math.min(z.motion * 5, 1), bh);
+    }
+
+    // Zone label
+    ox.font = 'bold 11px DM Mono,monospace';
+    const lbl = z.name + (z.trg ? '  ⚠' : '');
+    const tw  = ox.measureText(lbl).width;
+    ox.fillStyle = 'rgba(0,0,0,0.65)';
+    ox.fillRect(z.x + 3, z.y + 3, tw + 8, 16);
+    ox.fillStyle   = z.trg ? '#fc8181' : z.color;
+    ox.textBaseline = 'top';
+    ox.fillText(lbl, z.x + 7, z.y + 5);
+  });
+
+  // Drawing preview
+  if (st.drawing && st.ds && st.dc) {
+    const x = Math.min(st.ds.x, st.dc.x), y = Math.min(st.ds.y, st.dc.y);
+    const w = Math.abs(st.dc.x - st.ds.x),  h = Math.abs(st.dc.y - st.ds.y);
+    ox.strokeStyle = st.color; ox.lineWidth = 2;
+    ox.setLineDash([8, 4]); ox.strokeRect(x, y, w, h); ox.setLineDash([]);
+    ox.fillStyle = hexRgba(st.color, 0.1); ox.fillRect(x, y, w, h);
+
+    const sl  = `${w}×${h}px`;
+    ox.font   = '11px DM Mono,monospace';
+    const stw = ox.measureText(sl).width;
+    ox.fillStyle = 'rgba(0,0,0,0.7)';
+    ox.fillRect(x + w / 2 - stw / 2 - 4, y + h / 2 - 9, stw + 8, 18);
+    ox.fillStyle     = st.color;
+    ox.textAlign     = 'center';
+    ox.textBaseline  = 'middle';
+    ox.fillText(sl, x + w / 2, y + h / 2);
+    ox.textAlign = 'left';
+  }
+}
+
+// ── Button wiring ─────────────────────────────────────────
+document.getElementById('bScreen').addEventListener('click',    () => startStream('screen'));
+document.getElementById('bScreenAlt').addEventListener('click', () => startStream('screen'));
+document.getElementById('bCam').addEventListener('click',       () => startStream('camera'));
+document.getElementById('bStop').addEventListener('click',      stopStream);
+document.getElementById('bClear').addEventListener('click',     () => { st.zones = []; renderZones(); });
+document.getElementById('bTest').addEventListener('click',      () => playAlarm());
+document.getElementById('bSnap').addEventListener('click',      () => takeSnapshot('handmatig'));
+
+document.getElementById('bSil').addEventListener('click', () => {
+  st.silenced = true;
+  stopAlarm();
+  if (st.coolTimer) { clearTimeout(st.coolTimer); st.coolTimer = null; }
+  clearAlarmUI();
+  addLog('Alarm gedempt', 'info');
+});
+
+document.querySelectorAll('[data-tool]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    st.tool = btn.dataset.tool;
+    document.querySelectorAll('[data-tool]').forEach(b => {
+      b.classList.remove('active');
+      b.setAttribute('aria-pressed', 'false');
+    });
+    btn.classList.add('active');
+    btn.setAttribute('aria-pressed', 'true');
+    oc.className = st.tool === 'view' ? 'mode-view' : '';
+  });
+});
+
+// Initial config sync
+syncCfg();
+</script>
+</body>
+</html>
